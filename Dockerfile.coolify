@@ -1,0 +1,48 @@
+# Dockerfile.coolify - Optimizado para Coolify
+# Bot de Telegram para descargas de video/audio
+
+# ============================================
+# Stage 1: Builder
+# ============================================
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ============================================
+# Stage 2: Runner
+# ============================================
+FROM python:3.12-slim AS runner
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/* \
+    && addgroup --system --gid 1001 botgroup \
+    && adduser --system --uid 1001 --gid 1001 botuser
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+COPY --chown=botuser:botgroup telegram_bot.py .
+
+RUN mkdir -p /app/downloads && \
+    chown -R botuser:botgroup /app/downloads
+
+USER botuser
+
+CMD ["dumb-init", "python", "telegram_bot.py"]

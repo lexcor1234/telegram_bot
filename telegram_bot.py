@@ -1,16 +1,22 @@
 import os
 import logging
+from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 import yt_dlp
 import asyncio
 
+# Cargar variables de entorno
+load_dotenv()
+
 # Configurar logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Token del bot (desde variable de entorno o hardcoded para pruebas locales)
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8457437900:AAE6-NzTMAzlNZvCMbXRqNyl2GAhzwC8nDs")
+# Token del bot (desde variable de entorno)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN no está configurado. Crea un archivo .env con tu token.")
 
 # Carpeta de descargas
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
@@ -223,10 +229,13 @@ async def start_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }]
         })
     else:
+        # Formatos flexibles con fallback
         if quality == "best":
-            ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+            ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best'
         else:
-            ydl_opts['format'] = f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}][ext=mp4]/best'
+            ydl_opts['format'] = f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={quality}]+bestaudio/best'
+        # Merge a mp4 si es necesario
+        ydl_opts['merge_output_format'] = 'mp4'
 
     try:
         # Descargar
