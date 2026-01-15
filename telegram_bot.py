@@ -229,10 +229,13 @@ async def start_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }]
         })
     else:
+        # Formatos flexibles con fallback
         if quality == "best":
-            ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+            ydl_opts['format'] = 'bestvideo+bestaudio/best'
         else:
-            ydl_opts['format'] = f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}][ext=mp4]/best'
+            ydl_opts['format'] = f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best'
+        # Merge a mp4 si es necesario
+        ydl_opts['merge_output_format'] = 'mp4'
 
     try:
         # Descargar
